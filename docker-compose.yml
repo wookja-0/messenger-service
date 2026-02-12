@@ -1,0 +1,197 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: messenger-postgres
+    environment:
+      POSTGRES_DB: messenger
+      POSTGRES_USER: messenger_user
+      POSTGRES_PASSWORD: messenger_pass
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - messenger-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U messenger_user -d messenger"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: messenger-redis
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis_pass} --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - messenger-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API Gateway
+  nginx:
+    build: ./nginx
+    container_name: messenger-nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - chat-service
+      - file-service
+      - auth-service
+      - room-service
+      - frontend
+      - admin-frontend
+      - redis
+    networks:
+      - messenger-network
+    restart: unless-stopped
+
+  # 채팅 서비스
+  chat-service:
+    build:
+      context: ./backend
+      dockerfile: chat-service/Dockerfile
+    container_name: messenger-chat-service
+    expose:
+      - "8001"
+    environment:
+      - DATABASE_URL=postgresql://messenger_user:messenger_pass@postgres:5432/messenger
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis_pass}@redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - messenger-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 파일 서비스
+  file-service:
+    build:
+      context: ./backend
+      dockerfile: file-service/Dockerfile
+    container_name: messenger-file-service
+    expose:
+      - "8002"
+    environment:
+      - DATABASE_URL=postgresql://messenger_user:messenger_pass@postgres:5432/messenger
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis_pass}@redis:6379/0
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_REGION=${AWS_REGION:-ap-northeast-2}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME:-}
+      - CLOUDFRONT_URL=${CLOUDFRONT_URL:-}
+    volumes:
+      - file-storage:/app/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - messenger-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 인증 서비스
+  auth-service:
+    build:
+      context: ./backend
+      dockerfile: auth-service/Dockerfile
+    container_name: messenger-auth-service
+    expose:
+      - "8003"
+    environment:
+      - DATABASE_URL=postgresql://messenger_user:messenger_pass@postgres:5432/messenger
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis_pass}@redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-your-secret-key-change-in-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - messenger-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 채팅방 서비스
+  room-service:
+    build:
+      context: ./backend
+      dockerfile: room-service/Dockerfile
+    container_name: messenger-room-service
+    expose:
+      - "8004"
+    environment:
+      - DATABASE_URL=postgresql://messenger_user:messenger_pass@postgres:5432/messenger
+      - REDIS_URL=redis://:${REDIS_PASSWORD:-redis_pass}@redis:6379/0
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - messenger-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # 프론트엔드
+  frontend:
+    build: ./frontend
+    container_name: messenger-frontend
+    expose:
+      - "3000"
+    environment:
+      - REACT_APP_API_URL=http://localhost
+    networks:
+      - messenger-network
+    restart: unless-stopped
+
+  # 관리자 프론트엔드
+  admin-frontend:
+    build: ./admin-frontend
+    container_name: messenger-admin-frontend
+    expose:
+      - "3001"
+    environment:
+      - REACT_APP_API_URL=http://localhost
+    networks:
+      - messenger-network
+    restart: unless-stopped
+
+networks:
+  messenger-network:
+    driver: bridge
+
+volumes:
+  file-storage:
+  postgres-data:
+  redis-data:
