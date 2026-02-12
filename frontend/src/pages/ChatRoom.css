@@ -95,6 +95,36 @@
   border-radius: 20px;
   font-weight: 600;
   font-size: 14px;
+  white-space: nowrap;
+}
+
+.header-user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.header-user-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.header-user-avatar-initial {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.header-user-avatar--fallback {
+  background: rgba(0, 0, 0, 0.15);
 }
 
 .logout-btn {
@@ -279,6 +309,35 @@
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
+}
+
+.messages-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #999;
+  padding: 24px 12px;
+  gap: 8px;
+}
+
+.messages-empty svg {
+  opacity: 0.5;
+}
+
+.messages-empty-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #555;
+  margin: 4px 0 0 0;
+}
+
+.messages-empty-hint {
+  font-size: 13px;
+  color: #888;
+  margin: 0;
 }
 
 .date-divider {

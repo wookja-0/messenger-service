@@ -18,6 +18,7 @@ function Main({ user, onLogout, onProfileUpdate }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [onlineUsers, setOnlineUsers] = useState([]);
   const [showOnlineUsers, setShowOnlineUsers] = useState(false);
+  const [selectedOnlineUser, setSelectedOnlineUser] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -315,13 +316,54 @@ function Main({ user, onLogout, onProfileUpdate }) {
                   <div className="empty-online">온라인 사용자가 없습니다</div>
                 ) : (
                   onlineUsers.map((onlineUser) => (
-                    <div key={onlineUser.id} className="online-user-item">
+                    <button
+                      key={onlineUser.id}
+                      type="button"
+                      className={`online-user-item ${selectedOnlineUser?.id === onlineUser.id ? 'online-user-item--active' : ''}`}
+                      onClick={() => setSelectedOnlineUser(onlineUser)}
+                    >
                       <div className="online-indicator-dot"></div>
-                      <span>{onlineUser.username}</span>
-                    </div>
+                      <span className="online-user-name">{onlineUser.username}</span>
+                    </button>
                   ))
                 )}
               </div>
+
+              {selectedOnlineUser && (
+                <div className="online-user-detail">
+                  <h4 className="online-user-detail-title">사용자 정보</h4>
+                  <div className="online-user-detail-row">
+                    <span className="label">이름</span>
+                    <span className="value">{selectedOnlineUser.username}</span>
+                  </div>
+                  <div className="online-user-detail-row">
+                    <span className="label">ID</span>
+                    <span className="value id">
+                      {selectedOnlineUser.id}
+                    </span>
+                  </div>
+                  <div className="online-user-detail-row">
+                    <span className="label">참여 중 채팅방</span>
+                    <span className="value">
+                      {Array.isArray(selectedOnlineUser.rooms) && selectedOnlineUser.rooms.length > 0
+                        ? `${selectedOnlineUser.rooms.length}개`
+                        : '정보 없음'}
+                    </span>
+                  </div>
+                  {Array.isArray(selectedOnlineUser.rooms) && selectedOnlineUser.rooms.length > 0 && (
+                    <div className="online-user-rooms">
+                      {selectedOnlineUser.rooms.map((roomId) => {
+                        const room = rooms.find((r) => r.id === roomId);
+                        return (
+                          <div key={roomId} className="online-user-room-chip">
+                            {room ? room.name : roomId}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>

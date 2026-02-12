@@ -449,6 +449,24 @@ function ChatRoom({ user, onLogout }) {
     }
   };
 
+  const formatFullDateTime = (timestamp) => {
+    if (!timestamp) return '';
+    let isoString = timestamp;
+    if (!isoString.endsWith('Z') && !isoString.includes('+') && !isoString.includes('-', 10)) {
+      isoString = isoString + 'Z';
+    }
+    const date = new Date(isoString);
+    return date.toLocaleString('ko-KR', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      timeZone: 'Asia/Seoul'
+    });
+  };
+
   const getFileIcon = (mimetype) => {
     if (!mimetype) return <FiFile />;
     if (mimetype.startsWith('image/')) return <FiImage />;
@@ -557,7 +575,7 @@ function ChatRoom({ user, onLogout }) {
             {room.description && <p>{room.description}</p>}
           </div>
         </div>
-        <div className="header-right">
+          <div className="header-right">
           <button 
             className="show-members-btn"
             onClick={() => setShowMembers(!showMembers)}
@@ -566,7 +584,21 @@ function ChatRoom({ user, onLogout }) {
             <FiUsers />
           </button>
           <div className="user-menu">
-            <FiUser />
+            <div className="header-user-avatar">
+              {user.profile_image_url ? (
+                <img
+                  src={user.profile_image_url.startsWith('http') ? user.profile_image_url : (user.profile_image_url.startsWith('/') ? `${API_URL}${user.profile_image_url}` : `${API_URL}/${user.profile_image_url}`)}
+                  alt={user.username}
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.closest('.header-user-avatar').classList.add('header-user-avatar--fallback');
+                  }}
+                />
+              ) : null}
+              <span className="header-user-avatar-initial">
+                {user.username?.charAt(0).toUpperCase()}
+              </span>
+            </div>
             <span>{user.username}</span>
           </div>
           {room && currentUserId && (
@@ -616,8 +648,15 @@ function ChatRoom({ user, onLogout }) {
           </div>
 
           <div className="messages-container">
-            <AnimatePresence>
-              {messages.map((msg, index) => {
+            {messages.length === 0 ? (
+              <div className="messages-empty">
+                <FiMessageCircle size={48} />
+                <p className="messages-empty-title">대화를 시작해보세요</p>
+                <p className="messages-empty-hint">아직 메시지가 없습니다. 아래 입력창에서 첫 메시지를 보내보세요.</p>
+              </div>
+            ) : (
+              <AnimatePresence>
+                {messages.map((msg, index) => {
                 const isOwn = msg.username === user.username;
                 const showDate = index === 0 || 
                   formatDate(messages[index - 1].timestamp) !== formatDate(msg.timestamp);
@@ -671,6 +710,7 @@ function ChatRoom({ user, onLogout }) {
                       )}
                       <motion.div
                         className={`message ${isOwn ? 'own-message' : ''} ${msg.isSystem ? 'system-message' : ''} ${msg.fileInfo ? 'file-message' : ''} ${isConsecutive ? 'consecutive-own' : ''} ${isConsecutiveOther ? 'consecutive-other' : ''}`}
+                        title={formatFullDateTime(msg.timestamp)}
                       >
                         {!msg.isSystem && (
                           <div className="message-header">
@@ -722,7 +762,8 @@ function ChatRoom({ user, onLogout }) {
                   </React.Fragment>
                 );
               })}
-            </AnimatePresence>
+              </AnimatePresence>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
