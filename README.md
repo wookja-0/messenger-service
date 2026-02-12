@@ -101,7 +101,9 @@ http://localhost/admin    # 관리자 페이지
 
 4. 회원가입 후 로그인하여 사용
    - 일반 사용자: 회원가입 후 자동으로 오픈채팅방에 참여
-   - 관리자: `admin@admin.com` 계정으로 관리자 페이지에서 로그인
+   - 관리자: 관리자 페이지에서 기본 계정으로 로그인
+     - ID: `admin@admin.com`
+     - PW: `adminadmin`
 
 ### 서비스별 포트
 
